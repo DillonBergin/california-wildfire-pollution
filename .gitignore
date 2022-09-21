@@ -1,0 +1,10 @@
+data/raw/childs_et_al_study_data/smokePM_predictions_20060101_20201231.csv
+data/
+.Rproj.user/
+*Rproj
+.Rhistory
+.DS_Store
+*_cache/
+
+.Rproj.user
+.Rdata

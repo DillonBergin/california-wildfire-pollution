@@ -1,0 +1,41 @@
+---
+title: "Localized findings"
+output: html_notebook
+---
+
+
+```{r}
+library(tidyverse)
+library(here)
+library(janitor)
+library(sf)
+library(lubridate)
+library(rio)
+library(waldo)
+```
+
+```{r}
+unweighted_grids <- read_csv("ca_county_grid.csv")
+weighted_grids <-read_csv(here("childs_county_level_results", "annual_county_smokePM.csv"))
+```
+
+```{r}
+smoke_days_by_year <- unweighted_grids %>% 
+  group_by(county, year = floor_date(date, "year")) %>% 
+  summarize(days = n_distinct(date)) %>% 
+  mutate(year = as.numeric(format(year,'%Y'))) %>% 
+  select(county, year, days) %>% 
+  pivot_wider(names_from = year, values_from = days)
+
+```
+
+```{r}
+smoke_pm25_by_year <- unweighted_grids %>% 
+  group_by(county, date = floor_date(date, "year")) %>% 
+  summarize(pm25 = round(mean(pm25), digits = 2)) %>% 
+  mutate(year = as.numeric(format(date,'%Y'))) %>% 
+  select(county, year, pm25) %>% 
+  pivot_wider(names_from = year, values_from = pm25)
+
+```
+
