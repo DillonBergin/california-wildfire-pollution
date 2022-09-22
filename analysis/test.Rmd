@@ -1,14 +1,9 @@
 ---
-title: "Exploratory analysis for local findings"
-author: "Dillon Bergin, MuckRock Data Reporter"
-date: "09/21/2022"
-output: 
-  html_document:
-    theme: readable
-    highlight: zenburn
-    toc: true
+title: "test"
+author: "Dillon Bergin"
+date: "9/22/2022"
+output: html_document
 ---
-
 ```{r loading, warning=F, message=F}
 library(tidyverse)
 library(here)
@@ -66,7 +61,7 @@ tm_shape(county_sf) +
 ```
 
 # Do these counties also have the most days with smoke overhead? Is there a difference between the two? 
-### Take-away
+### Take-aways 
 - Big differences look like Fresno and Tulare, as well as Imperial on the bottom. Is this downwind smoke? 
 
 ```{r warning=F, message=F}
@@ -215,6 +210,4 @@ tm_shape(fall_2020_sf) +
 
 
 ```
-
-
 

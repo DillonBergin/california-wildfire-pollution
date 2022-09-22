@@ -39,7 +39,7 @@ ca_county_grid <-
   select(county = NAME, date, grid_id, pm25 = smokePM_pred)
 
 # 4. EXPORT AS SHAPE FILE FILE FOR ANALYSIS 
-export(ca_county_grid, "data/processed/ouput_etl/ca_county_grid.csv")
+export(ca_county_grid, "data/processed/output_etl/ca_county_grid.csv")
 
 
 
