@@ -1,0 +1,360 @@
+---
+title: "Localized Findings of California Wildfire Smoke PM2.5"
+author: "Dillon Bergin, MuckRock Data Reporter"
+date: "09/23/2022"
+output: 
+  html_document:
+    theme: readable
+    highlight: zenburn
+    toc: true
+---
+
+```{r loading, warning=F, message=F}
+library(tidyverse)
+library(here)
+library(janitor)
+library(sf)
+library(lubridate)
+library(rio)
+library(tidycensus)
+library(tigris)
+library(tmap)
+library(zoo)
+library(DT)
+```
+# Load in the data 
+These three data sets were supplied by Marissa Childs. The first data set is the base data of her group's paper, the second weights that data by population and subsets by county, the third does the same as the second but only for areas that experienced at least one day of 100 micrograms of wildfire-specific PM2.5.
+```{r results=F, warning=F, message=F}
+unweighted_grids <- read_csv(here("data", "processed", "output_etl", "ca_county_grid.csv"))
+# Daily estimates of wildfire-specific PM2.5 from 2006 to 2020 at 10km by 10km grid spatial resolution 
+weighted_grids <- read_csv(here("data", "processed", "childs_county_level_results", "annual_county_smokePM.csv"))
+# Yearly estimates using the above data set weighted against population for each grid and aggregated and then aggregated up to the county level 
+extreme_day_pop_estimates <- read_csv(here("data", "processed", "childs_county_level_results", "ca_extreme_days_pop_estimates.csv"))
+# Yearly, weighted estimates of populations exposed to at least one day over 100 micrograms 
+```
+# Finding 1: 21 times more Californians are exposed to extreme smoke than a decade ago.
+
+*“That includes 21 times more Californians than a decade ago, scattered among vulnerable communities from the Oregon border, to the foothills of the Sierra Nevadas and down through the Central Valley.”*
+```{r results=F, warning=F, message=F}
+change <- extreme_day_pop_estimates %>% 
+  select(1,3) %>% 
+  pivot_wider(names_from = year, values_from = pop_over100) %>% 
+  mutate(total_then = sum(`2006`,`2007`, `2008`, `2009`, `2010`)) %>%  
+  mutate(total_now = sum(`2016`, `2017`, `2018`, `2019`, `2020`)) %>% 
+  select("total_now", "total_then") %>% 
+  mutate(fold_change = (total_now/total_then))
+
+
+```
+### Raw data 
+```{r echo=FALSE, warning=F, message=F}
+datatable(extreme_day_pop_estimates, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+
+### Calculations 
+```{r echo=FALSE, warning=F, message=F}
+datatable(change, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+# Finding 2: In 2020, more smoke plumes hung overhead and smoke on the ground was twice the previous decade's.
+*"Smoke plumes hung overhead so often in 2020 that pollution from wildfires at ground-level reached a state average almost twice the previous decade’s, according to analysis of the paper’s data by NPR’s California Newsroom and MuckRock."*
+
+
+```{r warning=F, message=F}
+statewide_smoke_days <-  unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(smoke_days = n_distinct(date))
+  
+statewide_smoke_days_comparison <- statewide_smoke_days %>% 
+  pivot_wider(names_from = year, values_from = smoke_days) %>% 
+  mutate(avg_decade = sum(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`)/10) %>% 
+  select(`2020`, avg_decade, `2018`, `2008`)
+
+
+```
+### Number of days with smoke plumes overhead anywhere in California by year 
+```{r echo=FALSE, warning=F, message=F}
+
+datatable(statewide_smoke_days_comparison, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+
+
+```
+
+### Average PM in 2020 compared to other years 
+
+```{r warning=F, message=F}
+statewide_daily_pm <- unweighted_grids %>% 
+  group_by(date) %>% 
+  summarize(daily_avg_pm25 = mean(pm25))
+
+#account for leap years 
+statewide_yearly_pm <- statewide_daily_pm %>% 
+  mutate(date = floor_date(as_date(date), "year")) %>% 
+  group_by(date) %>% 
+  summarize(sum_pm25 = sum(daily_avg_pm25)) %>% 
+  mutate(annual_avg_pm25 = case_when(leap_year(date)==TRUE ~ sum_pm25/366, leap_year(date) == FALSE ~ sum_pm25/365)) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  select(year, annual_avg_pm25)
+              
+              
+statewide_yearly_pm_comparison <- statewide_yearly_pm %>% 
+  pivot_wider(names_from = year, values_from = annual_avg_pm25) %>% 
+  mutate(avg_prev_decade = sum(`2006`, `2007`, `2008`, `2009`,`2010`)/5) %>%
+  mutate(change = (`2020`- avg_prev_decade)/avg_prev_decade) %>% 
+  select(`2020`, avg_prev_decade, change) 
+  
+```
+
+### Raw data
+
+```{r echo=FALSE, warning=F, message=F}
+
+datatable(statewide_yearly_pm, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+
+
+```
+### Calculations
+```{r echo=FALSE, warning=F, message=F}
+
+datatable(statewide_yearly_pm_comparison, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+
+
+```
+
+# Finding 3: From 2006 to 2011, about 200,000 Californians lived in places with at least one day of over 100 micrograms. Between 2015 to 2020, that number increased to 4.5 million. 
+
+*"In the previous decade, about 200,000 Californians a year lived in areas where they were exposed to dangerous smoke. By 2020, 4.5 million did."*
+```{r warning=F, message=F}
+
+change_decade_avg <- extreme_day_pop_estimates %>% 
+  select(1,3) %>% 
+  pivot_wider(names_from = year, values_from = pop_over100) %>% 
+  mutate(avg_then = sum(`2006`, `2007`, `2008`, `2009`, `2010`)/5) %>%  
+  mutate(avg_now = sum(`2016`, `2017`, `2018`, `2019`, `2020`)/5) %>% 
+  select(avg_now, avg_then)
+
+
+```
+### Raw data 
+```{r echo=FALSE, warning=F, message=F}
+datatable(extreme_day_pop_estimates, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+
+### Calculations 
+```{r echo=FALSE, warning=F, message=F}
+datatable(change_decade_avg, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+# Finding 4: From 2016 to 2020, NorCal counties have had annual smoke PM 70% higher than the state's average.
+*“Near California’s northern border, in Trinity, Siskiyou, and Shasta, Tehama, and Glenn counties,  is more than 70% higher than the state’s average.”*
+```{r warning=F, message=F}
+county_daily_avg <- unweighted_grids %>% 
+  group_by(date, county) %>% 
+  summarize(daily_avg_pm25 = mean(pm25))
+
+county_yearly_avg <- county_daily_avg %>% 
+  mutate(date = floor_date(as_date(date), "year")) %>% 
+  group_by(county, date) %>% 
+  summarize(sum_pm25 = sum(daily_avg_pm25)) %>% 
+  mutate(annual_avg_pm25 = case_when(leap_year(date)==TRUE ~ sum_pm25/366, leap_year(date) == FALSE ~ sum_pm25/365)) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  select(county, year, annual_avg_pm25)
+  
+norcal_yearly_avg_2016_2020 <- county_yearly_avg %>% 
+  filter(county %in% c("Trinity", "Siskiyou", "Shasta", "Tehama", "Glenn")) %>%  
+  filter(year %in% c("2016", "2017", "2018", "2019", "2020"))
+  
+statewide_yearly_avg_2016_2020 <- county_yearly_avg %>% 
+  filter(year %in% c("2016", "2017", "2018", "2019", "2020"))
+              
+
+
+```
+### Raw data 
+```{r echo=FALSE, warning=F, message=F}
+datatable(norcal_yearly_avg_2016_2020, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+
+### Calculations 
+```{r warning=F, message=F}
+
+nor_cal_mean <- mean(norcal_yearly_avg_2016_2020$annual_avg_pm25)
+all_mean <- mean(statewide_yearly_avg_2016_2020$annual_avg_pm25)
+diff = (nor_cal_mean - all_mean)/all_mean
+
+nor_cal_mean
+all_mean
+diff
+```
+
+# Finding 5: From 2016 to 2020, wildfire smoke added an average of 3 micrograms of pollution to central valley skies a year.
+*“Wildfires alone now add 3 micrograms of pollution a year to central valley skies, and which accounts for one-fourth of the annual federal limit.”*
+```{r}
+
+san_joaquin_avg_2016_2020 <-  county_yearly_avg %>%
+  filter(county %in% c("San Joaquin", "Stanislaus", "Merced", "Madera", "Fresno", "Kings", "Tulare", "Kern")) %>% 
+  filter(year %in% c("2016", "2017", "2018", "2019", "2020", "2018")) %>% 
+  group_by(county) %>% 
+  summarize(avg_pm25 = mean(annual_avg_pm25))
+
+
+
+  
+```
+### Raw data 
+```{r echo=FALSE, warning=F, message=F}
+datatable(san_joaquin_avg_2016_2020, filter = 'top', class = 'cell-border stripe order-column', extensions = 'Buttons',
+
+                            options = list(
+                                paging = TRUE,
+                                searching = TRUE,
+                                fixedColumns = TRUE,
+                                autoWidth = TRUE,
+                                ordering = TRUE,
+                                dom = 'tB',
+                                buttons = c('copy', 'csv', 'excel')
+                            ))
+```
+
+### Calculations 
+```{r warning=F, message=F}
+
+san_joaquin_2016_2020_avg <- mean(san_joaquin_avg_2016_2020$avg_pm25)
+
+san_joaquin_2016_2020_avg
+
+```
+
+
+# Visualization: Rolling Average of Population Exposure Change 
+
+```{r}
+rolling_av <- extreme_day_pop_estimates %>% 
+  select(1,3) %>% 
+  arrange(year) %>% 
+  mutate(roll_mean = rollmean(pop_over100, k = 10, fill = NA, align = "right")) %>% 
+  slice(10:15)
+
+
+rolling_av %>% 
+  ggplot(aes(x = year, y = roll_mean)) +
+  geom_line()
+
+```
+
+
+# Visualization: Small multiples 
+
+
+```{r include = FALSE, warning=F, message=F}
+
+
+ca_fips <- counties("CA") %>% 
+  select(county = NAME, county_fips = GEOID) %>% 
+  st_drop_geometry()
+
+ca_county_geoms <- counties("CA") %>% 
+  select(county = NAME) 
+
+weighted_grids_join <- 
+  weighted_grids %>% 
+  inner_join(ca_fips, by = "county_fips") %>% 
+  select(county, year, pm25 = annual_avg_smokePM) 
+
+weighted_counties_sf <- weighted_grids_join %>% 
+  inner_join(ca_county_geoms, by = "county") %>% 
+  st_sf()
+
+
+
+```
+
+```{r  warning=F, message=F}
+tm_shape(weighted_counties_sf) +
+  tm_polygons("pm25",
+              style = "quantile",
+              title = "Impact of Wildfire Smoke on Californian's Air") + 
+  tm_text("county", size = 1/4) +
+  tm_facets("year")
+
+```

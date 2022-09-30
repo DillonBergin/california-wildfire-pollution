@@ -1,0 +1,120 @@
+---
+title: "scraps"
+author: "Dillon Bergin"
+date: "9/27/2022"
+output: html_document
+---
+
+
+# Days over 100 PM
+
+days_100 <- unweighted_grids %>%
+  filter(pm25 >= 100) %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(smoke_days = n_distinct(date))
+
+comparison_days_100 
+
+# Comparing years 2006-2010 to 2016-2020 
+
+```{r}
+
+unweighted_year <- unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(avg = mean(pm25))
+
+unweighted_county_year <- unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(county, year) %>% 
+  summarize(avg = mean(pm25))
+
+san_joaquin <-  unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(county, year) %>% 
+  filter(county %in% c("San Joaquin", "Stanislaus", "Merced", "Madera", "Fresno", "Kings", "Tulare", "Kern")) %>% 
+  summarize(avg = mean(pm25)) %>% 
+  filter(avg >=12)
+
+
+unweighted_state_comparison <- unweighted_year %>% 
+  pivot_wider(names_from = year, values_from = avg) %>% 
+  mutate(avg_then = sum(`2006`, `2007`, `2008`, `2009`, `2010`)/5) %>%  
+  mutate(avg_now = sum(`2016`, `2017`, `2018`, `2019`, `2020`)/5) %>% 
+  select("avg_now", "avg_then") %>% 
+  mutate(percent_change = (avg_now-avg_then)/avg_then)
+
+
+weighted_year <- weighted_grids_join %>% 
+  group_by(year) %>% 
+  summarize(avg = mean(pm25))
+
+#Compare 
+
+weighted_state_comparison <- weighted_year %>% 
+  pivot_wider(names_from = year, values_from = avg) %>% 
+  mutate(avg_then = sum(`2006`, `2007`, `2008`, `2009`, `2010`)/5) %>%  
+  mutate(avg_now = sum(`2016`, `2017`, `2018`, `2019`, `2020`)/5) %>% 
+  select("avg_now", "avg_then") %>% 
+  mutate(percent_change = (avg_now-avg_then)/avg_then)
+
+```
+
+
+
+
+
+```{r}
+unweighted_pop <- unweighted_grids %>% 
+  inner_join(grid_pop, by = "grid_id")
+
+
+annual_av_weight <- weighted_grids_join %>% 
+  group_by(year) %>% 
+  summarize(annual_avg = mean(pm25))
+
+annual_av_unweighted <- unweighted_grids %>% 
+  mutate(date = floor_date(as_date(date), "year")) %>% 
+  group_by(date) %>% 
+  summarize(annual_avg = round(mean(pm25), digits = 2)) %>% 
+  mutate(date = format(date, "%Y"))
+
+annual_comparison <- annual_av_unweighted %>% 
+  pivot_wider(names_from = date, values_from = annual_avg) %>% 
+  mutate(avg_decade = sum(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`)/10) %>% 
+  select(`2020`, avg_decade, `2018`, `2008`)
+```
+
+# How does this differ by county?
+```{r}
+
+county_2020 <- unweighted_grids %>%
+  filter(date <= "2020-12-31", date >= "2020-01-01") %>% 
+  group_by(county, date) %>%
+  summarize(avg = mean(pm25)) %>% 
+  filter(avg > 100)
+ 
+select_counties_2020 <- county_2020 %>% 
+  group_by(county) %>% 
+  summarize(num_days = n_distinct(date))
+
+
+county_non_2020 <-unweighted_grids %>%
+  filter(date <= "2020-01-01") %>% 
+  group_by(county, date) %>%
+  summarize(avg = mean(pm25)) %>% 
+  filter(avg > 100)
+
+select_counties_non_2020 <- county_non_2020 %>% 
+  group_by(county) %>% 
+  summarize(num_days = n_distinct(date))
+
+## Intense days 
+
+
+```

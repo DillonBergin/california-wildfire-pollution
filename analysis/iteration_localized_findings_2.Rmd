@@ -1,0 +1,197 @@
+---
+title: "Final analysis for local findings"
+author: "Dillon Bergin, MuckRock Data Reporter"
+date: "09/23/2022"
+output: 
+  html_document:
+    theme: readable
+    highlight: zenburn
+    toc: true
+--- 
+
+```{r loading, warning=F, message=F}
+library(tidyverse)
+library(here)
+library(janitor)
+library(sf)
+library(lubridate)
+library(rio)
+library(tidycensus)
+library(tigris)
+library(tmap)
+```
+
+```{r results=F, warning=F, message=F}
+unweighted_grids <- read_csv(here("data", "processed", "output_etl", "ca_county_grid.csv"))
+weighted_grids <- read_csv(here("data", "processed", "childs_county_level_results", "annual_county_smokePM.csv"))
+#grid_pop <- read_csv(here("data", "raw", "childs_et_al_study_data", "grid_id_pop.csv"))
+extreme_day_pop_estimates <- read_csv(here("data", "processed", "childs_county_level_results", "ca_extreme_days_pop_estimates.csv"))
+```
+
+
+FINDING #1: 21-fold increase
+```{r}
+
+grid_days_100 <- unweighted_grids %>%
+  filter(pm25 >= 100) %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(grid_id, year) %>% 
+  summarize(sum(pm25)) %>% 
+  select(grid_id, year)
+  
+
+pop_year_over_100 <- grid_days_100 %>% 
+  inner_join(grid_pop, by = "grid_id") %>% 
+  group_by(year) %>% 
+  summarize(total_pop = sum(pop)) 
+  
+  
+# Double check there truly isn't a day over 100 PM2.5 in all of 2006, 2010, or 2011
+#years_2006_2010 <- unweighted_pop %>% 
+  #(year = floor_date(as_date(date), "year")) %>% 
+  #mutate(year = format(date, "%Y")) %>% 
+  #filter(year %in% c(2006, 2010))
+
+
+fold_comparison <- pop_year_over_100 %>% 
+  pivot_wider(names_from = year, values_from = total_pop) %>% 
+  mutate(total_then = sum(`2007`, `2008`, `2009`)) %>%  
+  mutate(total_now = sum(`2016`, `2017`, `2018`, `2019`, `2020`)) %>% 
+  select("total_now", "total_then") %>% 
+  mutate(fold_change = (total_now/total_then))
+
+
+```
+
+FINDING #2: Number of people exposed per year 
+
+```{r}
+
+groupings <- pop_year_over_100 %>% 
+  pivot_wider(names_from = year, values_from = total_pop) %>% 
+  mutate(avg = sum(`2007`, `2008`, `2009`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`,`2019`, `2020`)/14) %>% 
+  mutate(median = median(`2007`, `2008`, `2009`,`2012`, `2013`, `2014`, `2015`, `2016`, `2017`,`2019`, `2020`)) %>% 
+  select(avg, median, `2018`, `2020`)
+  
+
+```
+
+FINDING #3: Pushing EPA standards 
+```{r}
+
+# Average PM2.5 per year across whole state
+
+year_avg_pm <- unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(avg = mean(pm25))
+
+
+comparison_year_avg_pm <- year_avg_pm %>% 
+  pivot_wider(names_from = year, values_from = avg) %>% 
+  mutate(now_avg = sum(`2016`, `2017`, `2018`, `2019`, `2020`)/5) %>% 
+  mutate(then_avg = sum(`2006`, `2007`, `2008`, `2009`, `2010`)/5) %>% 
+  select(then_avg, now_avg)
+
+# Average PM2.5 per year by county 
+
+# Get Fips codes from Tigris package 
+ca_fips <- counties("CA") %>% 
+  select(county = NAME, county_fips = GEOID) %>% 
+  st_drop_geometry()
+
+# Join with grid data 
+weighted_grids_join <- 
+  weighted_grids %>% 
+  inner_join(ca_fips, by = "county_fips") %>% 
+  select(county, year, pm25 = annual_avg_smokePM)
+
+# Group weighted grids by county 
+county_weighted <- weighted_grids_join %>% 
+  group_by(county) %>% 
+  summarize(average = mean(pm25))
+
+# Group grids by county unweighted 
+county_unweighted <- unweighted_grids %>% 
+  group_by(county) %>% 
+  summarize(average = mean(pm25))
+
+# Filter to San Joaquin unweighted 
+san_joaquin_unweighted <-  county_unweighted %>% 
+  filter(county %in% c("San Joaquin", "Stanislaus", "Merced", "Madera", "Fresno", "Kings", "Tulare", "Kern"))
+
+# Filter to just San Joaquin weighted 
+san_joaquin_weighted <-  county_weighted %>% 
+  filter(county %in% c("San Joaquin", "Stanislaus", "Merced", "Madera", "Fresno", "Kings", "Tulare", "Kern"))
+
+```
+
+# FINDING 4: Northern California and Central Valley 
+
+```{r results=F, warning=F, message=F}
+
+ca_county_geoms <- counties("CA") %>% 
+  select(county = NAME) 
+
+weighted_all_years_sf <- weighted_grids_join %>% 
+  group_by(county, year) %>% 
+  summarize(annual_avg = mean(pm25))
+
+weighted_all_years_sf <- weighted_grids_join %>% 
+  group_by(county, year) %>% 
+  summarize(annual_avg = mean(pm25)) %>% 
+  inner_join(ca_county_geoms, by = "county") %>% 
+  st_sf()
+
+tm_shape(weighted_all_years_sf) +
+  tm_polygons("annual_avg",
+              title = "decile") + 
+              tm_text("county", size = 1/4)
+
+```
+
+
+
+# FINDING 5: By all metrics, 2020 was a huge outlier. 
+```{r}
+
+# Smoke plume days 
+annual_av_days <-  unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(smoke_days = n_distinct(date))
+  
+annual_day_comparison <- annual_av_days %>% 
+  pivot_wider(names_from = year, values_from = smoke_days) %>% 
+  mutate(avg_decade = sum(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`)/10) %>% 
+  select(`2020`, avg_decade, `2018`, `2008`)
+
+smoke_day_change <- (303-244)/244 
+
+
+# Average annual unweighted PM
+
+unweighted_year_avg <- unweighted_grids %>% 
+  mutate(year = floor_date(as_date(date), "year")) %>% 
+  mutate(year = format(date, "%Y")) %>% 
+  group_by(year) %>% 
+  summarize(avg = mean(pm25))
+
+comparison_unweighted_year <- unweighted_year_avg %>% 
+  pivot_wider(names_from = year, values_from = avg) %>% 
+  mutate(avg_decade = sum(`2010`, `2011`, `2012`, `2013`, `2014`, `2015`, `2016`, `2017`, `2018`, `2019`)/10) %>% 
+  select(`2020`, avg_decade, `2018`, `2008`)
+
+
+
+
+
+```
+
+
+
+
+
