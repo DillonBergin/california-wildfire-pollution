@@ -273,7 +273,7 @@ diff
 
 san_joaquin_avg_2016_2020 <-  county_yearly_avg %>%
   filter(county %in% c("San Joaquin", "Stanislaus", "Merced", "Madera", "Fresno", "Kings", "Tulare", "Kern")) %>% 
-  filter(year %in% c("2016", "2017", "2018", "2019", "2020", "2018")) %>% 
+  filter(year %in% c("2016", "2017", "2018", "2019", "2020")) %>% 
   group_by(county) %>% 
   summarize(avg_pm25 = mean(annual_avg_pm25))
 

@@ -22,6 +22,8 @@ ca_county_geoms <- counties("CA") %>%
 weighted_grids_join <- 
   weighted_grids %>% 
   inner_join(ca_fips, by = "county_fips") %>% 
+  group_by(year, county) %>% 
+  summarize(annual_avg_smokePM = sum(annual_avg_smokePM)) %>% 
   select(county, year, pm25 = annual_avg_smokePM)
 
 
@@ -30,11 +32,17 @@ weighted_counties_sf <- weighted_grids_join %>%
   st_sf()
 
 
-small_multiples <- tm_shape(weighted_counties_sf) +
+weighted_counties_sf_test <- weighted_counties_sf %>% 
+  st_drop_geometry()
+
+tm_shape(weighted_counties_sf) +
   tm_polygons("pm25",
               style = "quantile",
               title = "Impact of Wildfire Smoke on Californian's Air") + 
   tm_text("county", size = 1/4) +
   tm_facets("year")
 
-tmap_save(small_multiples, "weighted_county_small_multiples.svg")
+
+
+
+tmap_save(cont, "cont_small_multiples.svg")
