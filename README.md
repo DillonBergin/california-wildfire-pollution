@@ -8,16 +8,13 @@ The data used in this analysis comes from the paper *[Daily Local-Level Estimate
 
 To bring Childs' study down to the county-level for the state of California, we used three subsets of the original study's data. 
 
-- [ca_county_grid.csv](data/processed/childs_county_level_results/ca_county_grid.csv)
-- [annual_county_smokePM.csv](data/processed/childs_county_level_results/annual_county_smokePM.csv)
-- [ca_extreme_days_pop_estimates.csv](data/processed/childs_county_level_results/ca_extreme_days_pop_estimates.csv)
-
-https://github.com/echolab-stanford/daily-10km-smokePM
-
- The first data set is the base data of her group’s paper, the second weights that data by population and subsets by county, the third does the same as the second but only for areas that experienced at least one day of 100 micrograms of wildfire-specific PM2.5.
+- [ca_county_grid.csv](data/processed/childs_county_level_results/ca_county_grid.csv) - wildfire-specific PM2.5 estimates at spatial resolution of 10km by 10km 
+- [annual_county_smokePM.csv](data/processed/childs_county_level_results/annual_county_smokePM.csv) - wildfire-specific PM2.5 estimates weighted by the population within each 10km by 10km grid then aggregated up to the county-level, provided by Childs
+- [ca_extreme_days_pop_estimates.csv](data/processed/childs_county_level_results/ca_extreme_days_pop_estimates.csv) - total yearly population of the state that were exposed to at least one day of over 100 micrograms of PM2.5 
 
 
 # Methodology 
 
 
 # Questions / Feedback
+Contact Dillon Bergin at dillon@muckrock.com 
