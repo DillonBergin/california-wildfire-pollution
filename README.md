@@ -8,7 +8,7 @@ The data used in this analysis comes from the paper *[Daily Local-Level Estimate
 
 To bring Childs' study down to the county-level for the state of California, we used three subsets of the original study's data. 
 
-- `[ca_county_grid.csv](data/processed/childs_county_level_results/annual_county_smokePM.csv)`
+- `[ca_county_grid.csv](data/processed/childs_county_level_results)`
 - annual_county_smokePM.csv
 - ca_extreme_days_pop_estimates.csv
 
