@@ -19,7 +19,7 @@ To bring Childs' study down to the county-level for the state of California, we 
 When mapping the increase of wildfire-specific PM2.5 on the state of California, we chose to weight the values by population to emphasize wildfire smoke's impact where humans can breath it. 
 
 ### Extreme Smoke
-We defined the amount of Californians exposed to extreme smoke pollution as Californians exposed to at least one day over 100 micorgrams of PM2.5. This methodology was employed by Childs et al., and on the federal air quality index, or AQI, 100 micrograms of wildfire-specific PM2.5 level is a level of around 175, the the middle of the "unhealthy" range. 
+We defined the amount of Californians exposed to extreme smoke pollution as Californians exposed to at least one day of over 100 micorgrams of PM2.5. This methodology was employed by Childs' team. On the federal air quality index, or AQI, 100 micrograms of wildfire-specific PM2.5 level is a level of around 175, the the middle of the "unhealthy" range. 
 
 
 # Questions / Feedback
