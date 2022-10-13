@@ -15,10 +15,10 @@ To bring Childs' study down to the county-level for the state of California, we 
 
 # Methodology 
 
-**Weighting**
+### Weighting
 When mapping the increase of wildfire-specific PM2.5 on the state of California, we chose to weighted the values by population to emphasize wildfire smoke's impact where humans can breath it. 
 
-**Extreme Smoke** 
+### Extreme Smoke
 
 
 # Questions / Feedback
