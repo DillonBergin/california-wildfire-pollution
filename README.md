@@ -4,7 +4,7 @@ This repository contains data and findings that support a MuckRock and Californi
 
 # Data 
 
-The data used in this analysis comes from the paper [Daily Local-Level Estimates of Ambient Wildfire Smoke PM2.5 for the Contiguous US](https://pubs.acs.org/doi/10.1021/acs.est.2c02934) by Childs et. al, which has [its own repository of script and data](https://github.com/echolab-stanford/daily-10km-smokePM).
+The data used in this analysis comes from the paper *[Daily Local-Level Estimates of Ambient Wildfire Smoke PM2.5 for the Contiguous US](https://pubs.acs.org/doi/10.1021/acs.est.2c02934)* by Childs et. al, which has [its own repository of script and data](https://github.com/echolab-stanford/daily-10km-smokePM).
 
 Three data sets 
 
